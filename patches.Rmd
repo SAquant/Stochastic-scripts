@@ -1,0 +1,391 @@
+---
+title: "patches"
+author: "Mbongiseni Dlamini"
+date: "12/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#ptions(error=recover)
+
+#https://ggplot2.tidyverse.org/reference/geom_smooth.html
+# 1) Enter SIR parameters and functions
+i0_1 <- 15 # number of initial infecteds in patch 1
+i0_2 <- 3  # number of initial infecteds in patch 2
+i0_3 <- 30  # number of initial infecteds in patch 3
+initials <- c(i0_1,i0_2,i0_3)
+
+
+N_1 <- 100 #number of people in patch 1
+N_2 <- 250#number of people in patch 2
+N_3 <- 300 #number of people in patch 3
+patch_pop <- c(N_1,N_2,N_3)# vector of patch populations
+
+
+s_1 <- patch_pop[1] -2 # number of susceptibles patch 1
+s_2 <- patch_pop[2] -3# number of susceptibles patch 2
+s_3<- patch_pop[3] -10 # number of susceptibles patch 3
+
+suscept <- c(s_1,s_2,s_3)
+
+br_dr <- 1/4 # birth/death rate
+
+## diagonal entries denote contact rates within patches.
+## THE I-J ELEMENTS denote contacts between patch i and patch j.
+
+cr =  matrix(0,nrow=length(patch_pop), ncol= length(patch_pop))
+in_patch_contact_rate = 0.8
+
+out_patch_contact_rate =  0.4
+
+for(i in 1:length(patch_pop)){
+  for(j in 1:length(patch_pop)){
+    if(i == j){ cr[i,j] = in_patch_contact_rate}
+    else{cr[i,j] = out_patch_contact_rate}
+  }
+}
+
+
+
+###################################
+
+#My functions
+
+##################################
+# computes the harzards for an increase in infections per patch
+#takes as inputes a vector of starting number of infecteds, susceptibles, patch populations and patch contact rates.
+
+
+infections <- function(initials,suscpt,patch_pop,cr){
+  new_inf <- rep(0,length(patch_pop))
+  for(p in 1:length(patch_pop)){
+    new_inf[p]<- sum((cr[p,]*initials*suscpt[p])/patch_pop) #(k,j)=(-1,1) for the patch
+  }
+  new_infl <- as.list(new_inf)
+  return (new_infl)
+}
+
+
+sus_deaths <- function(initials,patch_pop){
+  new_deaths<- as.list(br_dr*initials/(patch_pop)) #(k,j)=(0,-1) for the patch
+  return(new_deaths)
+}
+
+
+
+birth_by_sus <- function(initials,patch_pop){
+  new_birth_sus <- as.list(br_dr*initials/(patch_pop))#(k,j)=(1,-1)for the patch.
+  return(new_birth_sus)
+}
+
+recovery <- function(initials,suscpt,patch_pop)
+{
+  
+  rec <- as.list((br_dr*(patch_pop-initials-suscpt))/(patch_pop))
+  return (rec)
+}
+
+
+
+#The fuction takes the initial number of infacteds, susceptiples,the number of patchs, total pupulation P.
+
+#need to still think about paths for the susceptibles and recovered
+
+patch_simulator <- function (initials,suscept,patch_pop,cr,n){
+  tvec = vector("numeric",n+1)
+  pop <- length(patch_pop)
+  ivec_1 = vector("numeric",n+1)
+  svec_1 = vector("numeric",n+1)
+  ivec_2 = vector("numeric",n+1)
+  svec_2 = vector("numeric",n+1)
+  ivec_3 = vector("numeric",n+1)
+  svec_3 = vector("numeric",n+1)
+  predicted_i= vector("numeric",n+1)
+  counter <- 0
+  predicted_i[1] <- sum(initials)
+  ivec_1[1] =initials[1]
+  svec_1[1] =  suscept[1]
+  ivec_2[1] = initials[2]
+  svec_2[1] = suscept[2]
+  ivec_3[1] = initials[3]
+  svec_3[1] = suscept[3]
+
+  
+  
+  #pick a patch
+  t = 0
+  tvec[1] = t
+  for (k in 2: n)
+  {
+    #compute the transitions
+    counter <- counter+1
+    I <-  unlist(i <- infections(initials,suscept,patch_pop,cr))
+    #get prob of new infs. i will be a list
+    
+    D <- unlist(d <- sus_deaths(initials,patch_pop))
+    B_S <- unlist(b<- birth_by_sus(initials,patch_pop))
+    R <- unlist(r <- recovery(initials,suscept,patch_pop))
+    
+    
+    patch_sum_rate=rep(0,length(patch_pop))
+    
+    #sums the rates for each patch
+    for(p in 1:length(patch_pop))
+    {
+      patch_sum_rate[p] <- (I[p]+D[p]+B_S[p]+R[p])
+      #so each element of patch_sum_rate contains the sum of the terms within the patch. patch_sum_rate[1] has the sum of the terms for patch 1.
+    }
+    patch_totals <- sum(patch_sum_rate) #Total sum of all patchs.
+    t = t + rexp(1,patch_totals)
+    
+    #Lets pick some patches
+    #sample(c(1,2,3),1,1,weights/patch_totals)
+    r <- runif(1)
+    if(patch_totals != 0)
+    {
+        if( r < patch_sum_rate[1]/patch_totals )
+        {
+          patch <-  1
+        }
+      else if(r < (patch_sum_rate[1]+patch_sum_rate[2])/patch_totals)
+        {
+          patch <- 2
+        }
+      else
+      {
+        patch <- 3
+      }
+    }
+  else
+  {
+    patch <- 0
+  }
+ 
+    #pick transition that occurs
+    r <- runif(1)
+    if(patch !=0)
+    {
+          if(r < I[patch]/patch_sum_rate[patch])
+          {
+            state <-  1
+          }
+      else if(r < (I[patch]+D[patch])/patch_sum_rate[patch])
+          {
+        state <- 2
+          }
+          else if(r < ((I[patch]+D[patch]+B_S[patch])/patch_sum_rate[patch]))
+          {
+            state <-  3
+          }
+        
+          else 
+          {
+            state <-  4
+          }
+    }
+          
+    else
+    {
+      break # steady state 
+    }
+    
+  
+    
+    ##############3######################################3
+    #After finding which patch and which transition occurs,
+    #we need to make changes in that patch
+    
+    #############################################################  
+    
+    if(patch == 1)
+    {
+      i_0 <- initials[1]
+      s_0 <- suscept[1]
+      
+      if(state ==1)
+      {
+        i_0 = i_0 + 1
+        s_0 = s_0 -1
+      }
+      else if(state ==2)
+      {
+        i_0 = i_0 -1
+      }
+      else if(state ==3)
+      {
+        i_0 = i_0 -1 
+        s_0 = s_0 +1
+      }
+      else if(state == 0)
+      {
+        i_0 = i_0 #do nothing
+        s_0 = s_0 #do nothing
+      }
+      else{
+        s_0 = s_0 +1
+      }
+      
+      ivec_1[k] = i_0
+      svec_1[k]=s_0
+      initials[1] <- i_0 # update the infecteds
+      suscept[1] <- s_0 #update the susceptibles
+      
+      # keep other patch obervations constant
+      ivec_3[k] = initials[3]
+          svec_3[k]=suscept[3]
+          ivec_2[k] = initials[2]
+          svec_2[k]=suscept[2]
+      
+    }
+    
+    else if(patch ==2)
+    {
+      i_0 <- initials[2]
+      s_0 <- suscept[2]
+      
+      if(state ==1)
+      {
+        i_0 = i_0 + 1
+        s_0 = s_0 -1
+      }
+      else if(state ==2)
+      {
+        i_0 = i_0 -1
+      }
+      else if(state ==3)
+      {
+        i_0 = i_0 -1 
+        s_0 = s_0 +1
+      }
+        else if(state == 0)
+      {
+        i_0 = i_0 #do nothing
+        s_0 = s_0 #do nothing
+      }
+      else{
+        s_0 = s_0 +1
+      }
+      
+      ivec_2[k] = i_0
+      svec_2[k]=s_0
+
+      initials[2] <- i_0 # update the infecteds
+      suscept[2] <- s_0 #update the susceptibles
+      
+      # keep the other patch observations constant
+      ivec_1[k] = initials[1]
+      svec_1[k]=suscept[1]
+      ivec_3[k] = initials[3]
+      svec_3[k]=suscept[3]
+    }
+    
+    else if(patch == 3)
+      {
+        i_0 <- initials[3]
+        s_0 <- suscept[3]
+        
+        if(state==1)
+        {
+          i_0 = i_0 + 1
+          s_0 = s_0 -1
+        }
+        else if(state ==2)
+        {
+          i_0 = i_0 -1
+        }
+        else if(state ==3)
+        {
+          i_0 = i_0 -1 
+          s_0 = s_0 +1
+        }
+        else if(state == 0)
+      {
+        i_0 = i_0 #do nothing
+        s_0 = s_0 #do nothing
+      }
+        else{
+          s_0 = s_0 +1
+        }
+        
+        ivec_3[k] = i_0
+        svec_3[k]=s_0
+        initials[3] <- i_0 # update the infecteds
+        suscept[3] <- s_0 #upda
+        
+        #keep other patch observations constant
+         ivec_1[k] = initials[1]
+          svec_1[k]=suscept[1]
+          ivec_2[k] = initials[2]
+          svec_2[k]=suscept[2]
+    }      
+    
+      else
+      {
+        break
+      }
+    predicted_i[k] <- ivec_1[k]+ivec_2[k]+ivec_3[k]
+    tvec[k] <- tvec[k-1]+t
+    my_ts_p1 <- ts(ivec_1,deltat = t, names = "City A")
+      my_ts_p2 <- ts(ivec_2,deltat = t,names = "City B")
+      my_ts_p3 <- ts(ivec_3,deltat = t,names = "City C")
+      my_ts_total <- ts(predicted_i,deltat = t, names = "Combined Cities")
+      
+          
+    }      
+    #adj <- as.numeric(i)-1
+  
+      
+
+  #print("step function of susceptiples in patch 1")
+  #plot(stepfun(tvec[1:counter-1],svec_1[1:counter]))
+  #print("step function of susceptiples in patch 2")
+  #plot(stepfun(tvec[1:counter-1],svec_2[1:counter]))
+  #print("step function of susceptiples in patch 3")
+  #plot(stepfun(tvec[1:counter-1],svec_3[1:counter]))
+  #print("step function of infecteds in patch 1")
+  #plot(stepfun(tvec[1:counter-1],ivec_1[1:counter]))
+  #print("step function of infecteds in patch 2")
+  #plot(stepfun(tvec[1:counter-1],ivec_2[1:counter]))
+  #print("step function of infecteds in patch 3")
+  #plot(stepfun(tvec[1:counter-1],ivec_3[1:counter]))
+  #plot(stepfun(tvec[1:counter-1],predicted_i[1:counter]))
+  #plot(my_ts_total)
+  #plot(my_ts_p1)
+  #plot(my_ts_p2)
+  #plot(my_ts_p3)
+  my_ts_list <- list()
+  my_ts_list[[1]] <- my_ts_p1
+  my_ts_list[[2]] <- my_ts_p2
+  my_ts_list[[3]] <- my_ts_p3
+    
+  return(my_ts_list)
+ 
+}
+
+
+
+#patch_simulator(initials,suscept,patch_pop,cr,1000)
+tsv=vector("numeric",10)
+tv=vector("numeric",10)
+g = list()
+patch_simulator(initials,suscept,patch_pop,cr,20)
+ 
+#for(i in 1:2)
+#{
+ # g[[i]] <- patch_simulator(initials,suscept,patch_pop,cr,20)
+#}
+
+
+#for(k in 1:2)
+#{
+#  f <- 3*k-2
+ # plot(g[[f]])
+#}
+
+
+.```
+

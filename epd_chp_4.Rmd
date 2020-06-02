@@ -1,0 +1,67 @@
+---
+title: "epid_chpt4_hw"
+author: "Mbongiseni Dlamini"
+date: "07/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Probility generating function
+
+```{r}
+## The generating function when we assume {p_k} has a poisson distribution
+c <- .8
+PGF<- function(z)
+{
+   r <- exp(c*(z-1))#
+   return (r)
+}
+## derivative of generationf fuction is given by
+PGF_PRIME <- function(x)
+{
+   d <-  c*exp(c*(x-1))
+   return (d)
+}
+
+mean_degree <- PGF_PRIME(1)
+
+# Since G_1'(1)= G_0'(1) the R_0 is given by
+R_0 <- PGF_PRIME(1)
+
+## PROBABLITY OF OUTBREAK
+z_of_n <- function(n){
+  
+  if(n== 0)
+  {
+    return (0)
+  }
+  else{
+    z <- exp(c*(z_of_n(n-1))-c)
+     return (z)
+  }
+}
+z_i <- z_of_n(5)
+
+## The case when we have a transimissibility T
+
+T <- 0.8
+# The new R_0=  TG_1'(1)=TG_0'(1)
+new_R_0 <- T*PGF_PRIME(1)
+
+#The distribution of disease outbreak:
+ddo <- function(z,T){
+  ddo <- exp(new_R_0*(z-1))
+  return (ddo)
+  
+}
+#mean size of outbreak
+
+mso <- 1+(T*PGF_PRIME(1))/(1-new_R_0)
+
+
+
+```
+

@@ -1,0 +1,99 @@
+---
+title: "SIS and SIR"
+author: "Mbongiseni Dlamini"
+date: "01/03/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+:opts_chunk$set(knitr:echo = TRUE)
+```
+```{r}
+# 1) Time fuction
+FU_inverse <- function(u){
+  
+  t <- log(u)/(b(i)+d(i))
+  t
+}
+
+# 2) Enter SIS parameters and functions
+
+B <- 1 #CONATACT RATE
+rr <- 1/4 # Recovery rate
+br_dr <- 1/4 # Birth rate = Death rate
+N <- 100
+n <- 0
+i_0 <- 2
+
+d <- function(x){
+  new_deaths <- (2*rr)*x
+  return(new_deaths)
+}
+b <- function(x){
+  new_inf <- x*(N-x)*((B)/N)
+  return(new_inf)
+}
+#Make transition jump matrix Q
+N <- 20 #POPULATI0N SIZE
+nrows <- N+1 #select number of rows
+ncols <- N+1 #number of columns
+product <- nrows*ncols
+
+vec= rep(0,product)
+View(vec)
+for(row in 1:nrows)
+{
+  for (column in 1:ncols){
+     u <- runif(1)
+    if(column == 1 && row== 1) 
+    {
+      vec[column+n] <- 1
+    }
+    else if (column-row == 1 ){
+      vec[column+n] <- d(column)*FU_inverse(u) #j = i-1
+    }
+    else if (row-column == 1){
+      vec[column+n] <- b(column)*FU_inverse(u) # j=i+1
+    }
+    
+    else if (row  == column && row !=1 )
+    {
+      vec[column+n] <- 1-(d(column)+b(column))*FU_inverse(u)
+    }
+    else{
+    vec[n+column] <- 0.00
+    }
+    
+  }
+    n <- n+ncols
+}
+    Q <- matrix(vec, nrow = nrows,ncol = ncols, byrow = TRUE)
+View(Q)
+
+
+# 3) do some simulating of instances of X
+rcfmc <- function(n,Q,pi0)
+{
+xvec = vector("numeric",n+1)
+tvec = vector("numeric",n)
+r = length(pi0)
+x = sample(r,1,prob=pi0)
+t = 0
+xvec[1] = x
+for(i in 1:n) {
+t = t+rexp(1,-Q[x,x])
+weights = Q[x,]
+weights[x] = 0
+x = sample(r,1,prob=weights)
+xvec[i+1] = x?
+tvec[i] = t
+}
+stepfun(tvec,xvec)
+}
+plot(rcfmc(N,Q,i_0))
+
+
+
+
+```
+

@@ -1,0 +1,96 @@
+---
+title: "Problem12"
+author: "Mbongiseni Dlamini"
+date: "17/02/2020"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#library(expm)
+library(Matrix)
+library(matlib)
+N <- 50 #POPULATI0N SIZE
+nrows <- N #select number of rows
+ncols <- N #number of columns
+product <- nrows*ncols
+vec= rep(0,product)
+
+
+B <- 0.25 #CONATACT RATE
+rr <- 5/22 # Recovery rate
+br_dr <- 5/22 # Birth rate = Death rate
+n <- 0
+
+# FUCTION new infections
+
+b <- function(x){
+  new_inf <- x*(N-x)*((B)/N)
+  return(new_inf)
+}
+# FUCTION new deaths
+
+d <- function(x){
+  new_deaths <- (2*rr)*x
+  return(new_deaths)
+}
+#Make matrix
+for(row in 1:nrows)
+{
+  for (column in 1:ncols){
+    
+    if (row==1 && column == 1){
+      vec[column+n] <- -(b(row)+d(row))
+    }
+    else if (row==1 && column == 2){
+      vec[column+n] <- b(row)
+    }
+    
+    else if(row - column == 1)
+    {
+      vec[column+n] <- d(row)
+    }
+    else if(row==column)
+    {
+      vec[column+n] <- -(d(row)+b(row))
+    }
+    else if(row-column == -1)
+    {
+      vec[column+n] <- b(row)
+    }
+    
+  }
+    n <- n+ncols
+}
+    D <- matrix(vec, nrow = nrows,ncol = ncols, byrow = TRUE)
+View(D)
+
+### The computation
+one <- rep(1,N)
+ONE <- matrix(one)
+View(ONE)
+inverse_D <- -1*inv(D)
+View(inverse_D)
+avg_times <- inverse_D %*% ONE
+I <- D %*% inverse_D
+View(I)
+View(avg_times)
+## part b
+
+# Here we solve the folowing equation:
+second_moment <- inverse_D %*% avg_times
+variance <- second_moment - (avg_times^2)
+View(variance)
+R_0 <- B/(rr+br_dr)
+R_0
+
+plot(avg_times, xlab = "Initial Number of Infecteds", ylab = "Time to Aborption")
+```
+

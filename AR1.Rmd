@@ -1,0 +1,41 @@
+---
+title: "AR(1)"
+author: "Mbongiseni Dlamini"
+date: "23/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+n = 1000000
+storage_vec = rep(0,n) #create vector with 10000 entries
+alpha = 0.3
+lambda = 0.4
+set.seed(2)
+Z_0=0
+library(matrixStats)
+
+for (variable in 1:n) {
+  result <-  alpha*Z_0 + rexp(1,lambda)
+  storage_vec[variable] <- result
+  Z_0 <- result
+}
+new_storage <- tail(storage_vec,0.25*n) #discrd burn in.
+#mat <- matrix(storage_vec,nrow = 0.25*n,ncol = 1) #turn into a matrix
+#var_from_sim <- colVars(mat)/n
+an_var <- var(new_storage)
+actual_var <- 1/(lambda**2*(1-alpha**2))
+
+#integrand <- function(x) {exp(lambda*(x-alpha))}
+#integrate(integrand,lower = 0.25*n, upper = n)
+
+
+```
+
+
+
+
+

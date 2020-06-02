@@ -1,0 +1,191 @@
+---
+title: "exercise3_chp4"
+author: "Mbongiseni Dlamini"
+date: "11/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+a)
+```{r}
+# 1) Setup inverse function
+FU_inverse <- function(u){
+  if (u<0)
+  {
+    x <- 0
+  }
+  else if (u> 0 && u < 1) {
+  x <- acos(1-u)}
+  else{
+    x <- 1
+  }
+  x
+}
+
+# 2) do some simulating of instances of X
+set.seed(2)
+n=10000
+Xs <- vector("numeric",n)
+
+for (i in 1:n) {
+  u <- runif(1)
+  Xs[i] <- FU_inverse(u)
+  
+}
+hist(Xs) #just for fun!
+
+
+```
+
+b)
+```{r}
+#Let [a,b]=[0,pi/2], so u~U(0,pi/2) and y~U(0,1)
+#Lets simulate or Xs
+set.seed(3)
+Xs_2 <- vector("numeric",10000)
+count <- 0
+while(count < 10000){
+  x <-  runif(1,0,pi/2)
+  y <- runif(1)
+  
+  if(y < sin(x))
+  {
+    count <- count+1
+    Xs_2[count] <- x}
+}
+hist(Xs_2)
+```
+c)
+```{r}
+#Lets pick our Xs
+FU_inverse2 <- function(t){
+  if (t<0)
+  {
+    x <- 0
+  }
+  else if (t> 0 && t < 1) {
+  x <- sqrt(t)*(pi/2)}
+  else{
+    x <- 1
+  }
+  x
+}
+set.seed(2)
+Xs_3 <- vector("numeric",10000)
+count <- 0
+a <- (pi)^2/8 #solve ak=1, our k= 2/pi through calculation.
+while(count < 10000){
+  x <-  runif(1) # pick an x 
+  y <- FU_inverse2(x)
+  u <- a*y*runif(1) # u=U(0,ah(y)) 
+  
+  if(u < sin(y))
+  {
+    count <- count+1
+    Xs_3[count] <- y}
+}
+
+hist(Xs_3,10)
+
+```
+
+Looking at our histograms, we can tell that we do seem to getting the probability distribution of f(x)= sin(x). Now to part d)
+
+d)
+```{r}
+#Analytically, we find that E(X)=1 and Var(X)=pi-3.
+#Compare the means:
+merr_1 <- 1-mean(Xs)
+merr_2 <- 1-mean(Xs_2)
+merr_3 <- 1-mean(Xs_3)
+#compare variances:
+verr_1 <- pi-3-var(Xs)
+verr_2 <- pi-3-var(Xs_2)
+verr_3 <- pi-3-var(Xs_3)
+#lets see
+merr_1 
+merr_2 
+merr_3 
+verr_1 
+verr_2 
+verr_3 
+
+```
+It looks like the error for the first method is pretty high when it comes to the mean but the variance matches the analytical result. The two other methods seem to approximate our pdf quite well. Some times we get a negative error, signaling over prediction! Which is not good. Now, to exercise 5.
+
+5)
+```{r}
+set.seed(3)
+# Lets create our Central limit theorem fuction.
+CLT <- function(n){
+  U_s <- vector("numeric",12)
+  N_s <- vector("numeric",n)
+for (t in 1:n){
+  
+  for(i in 1:12) #add the uniform draws
+  {
+  U_s[i] <- runif(1)
+  }
+  U_s
+N_s[t] <- (sum(U_s)-6)*sqrt(12)/12 #create a vec of n Norm distribted Ns
+
+}
+  N_s
+}
+
+
+# Lets test our function
+pretender <- CLT(125)
+#pretender #it works!
+
+#Lets see how it measures up to the resident rnorm?
+the_og <- vector("numeric",125)
+for(i in 125)
+{
+  the_og[i] <- rnorm(1,mean =0,sd =1)
+}
+m <- mean(the_og)-mean(pretender)
+v <- var(the_og)-var(pretender)
+m
+v
+#hist(pretender)
+#hist(the_og)
+  
+
+```
+It looks like this works quite well if we simulate from 12 u~U(0,1). As we increase the number, the more we move away from accuracy. Why? Shouldn't it matter what number we pick?
+6)
+```{r}
+# We are asked to simulate Ga(3,2). We know that we have to simulate this from exp(2) wich we build ourselves! So lets build.
+
+#1 Build the exp(lambda)
+exp_beta <- function(lambda,n)
+{
+  y <- vector("numeric",n)
+ for(i in 1:n)
+ {
+   y[i] <- -(1/lambda)*log(runif(1)) #our tool from the transformatin method
+ }
+  y
+}
+
+#2 We build Ga()
+Ga_beta <- function(n,shape,lambda_g)
+{
+   G <- vector("numeric",n)
+  for(i in 1:n)
+  {
+    G[i] <- sum(exp_beta(lambda_g,shape))
+  }
+  G
+  }
+#3 It's time to test
+mean(rgamma(25,3,2))-mean(Ga_beta(25,shape = 3,lambda_g = 3))
+var(rgamma(25,3,2))-var(Ga_beta(25,shape = 3,lambda_g = 3))
+hist(Ga_beta(25,shape = 3,lambda_g = 2))
+hist(rgamma(25,3,2),3)
+```
+Its pretty close!

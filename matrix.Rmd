@@ -1,0 +1,77 @@
+---
+title: "Assignment1"
+author: "Mbongiseni Dlamini"
+date: "24/09/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+## 1 Making the matrix
+
+I am proud of this matrix i constructed!!!
+
+
+```{r}
+library(expm)
+nrows <- 11
+ncols <- 11
+product <- nrows*ncols
+vec= rep(0,product)
+n <- 0
+p <- 0.6 #we can vary these, just don't now how to automate it at the moment.
+q <- 0.7# ^
+
+win_for_joe <- (1-(p+q)+2*p*q) #Given any p and q as described in our problem
+loss_for_joe <- (p+q)-2*p*q #   ^
+
+for (row in 1:nrows) {
+
+  for (column in 1:ncols) {
+    if (column-row == 1 & row != 1)
+    {
+      vec[n+column] <- win_for_joe
+    }
+    else if(column-row == -1 & column != ncols & row != nrows)
+    {
+      vec[n+column] <- loss_for_joe
+    }
+    else if (column== 1 & row==1 |column==ncols & row==nrows )
+    {
+      vec[n+column] <- 1
+    }
+    
+  else{
+    vec[n+column] <- 0.00
+  }
+  }
+  n <- n+ncols
+}  
+m <- matrix(vec, nrow = nrows,ncol = ncols, byrow = TRUE)
+View(m)
+ini_state <- c(0,0,0,0,0,1,0,0,0,0,0) #because joe has $5 to begin with
+
+#now we raise our matrix to n to see steady state and get our probabilities
+vec_of_win_prob = rep(0,300) # dummy vector to collect wining probabilities for 100 steps
+vec_of_loss_prob = rep(0,300) # dummy vector to collect lossing probabilities for 100 steps
+for (n in 1:300) {
+  r <- m%^%n
+  win <- ini_state%*%r # uP^n(j)
+  vec_of_win_prob[n] <- win[11] # the last entry
+  vec_of_loss_prob[n] <- win[1]
+}
+View(vec_of_win_prob) # alone
+View(vec_of_loss_prob) # alone
+View(win) # all states
+
+
+
+
+
+```
+
+We can see that given the current values of p and q, joe (who wins when its HH or TT) has a probability of winning (getting $10) in the long run with 0.69 and losing with 0.31. As the game progresses, his chances of losing increase from 0 to 0.31 while his chances of wining increase from 0 to .69.

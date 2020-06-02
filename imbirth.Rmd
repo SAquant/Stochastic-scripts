@@ -1,0 +1,74 @@
+---
+title: "Q"
+author: "Mbongiseni Dlamini"
+date: "30/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+imdeath_birth <- function(n=200000, x0=0, lambda=1, mu=0.9, beta= 0.3)
+  {
+    xvec = vector("numeric",n+1)
+    tvec = vector("numeric",n)
+    t = 0
+    x = x0
+    xvec[1] <- x
+    for(i in 1:n) {
+    t = t+rexp(1,lambda+x*mu+x*beta)
+    if ( runif(1,0,1) < (lambda+(x*beta))/(lambda+x*mu+x*beta)) #sum of poisson is ~ poisson with mean the sum of the means
+      x <- x+1
+    
+      else
+      x <- x-1
+      xvec[i+1] <- x
+      tvec[i] <- t
+    
+    }
+stepfun(tvec, xvec)
+}
+
+plot(imdeath_birth(10000,0,1,0.02,0.01))
+
+###############################################################################
+
+rdiff <- function(afun, bfun, x0 = 0, t = 50, dt = 0.01,
+...)
+{
+n <- t/dt
+xvec <- vector("numeric", n)
+x <- x0
+sdt <- sqrt(dt)
+for(i in 1:n) {
+  t <- i*dt
+  x <- x + afun(x,...)*dt +
+  bfun(x,...)*rnorm(1,0,sdt)
+  xvec[i] <- x
+  }
+ts (xvec, deltat = dt)
+}
+
+
+
+
+
+afun <- function(x,lambda,mu)
+{
+  lambda-mu*x
+}
+  bfun <- function(x,lambda,mu)
+{
+sqrt(lambda+mu*x)
+  }
+our_ts <-rdiff(afun,bfun,lambda=1,mu=0.1,dt=0.0001,t=50)
+length(our_ts)
+length(our_ts[floor(length(our_ts)/2):length(our_ts)])
+plot(our_ts)
+lambda/mu-mean(our_ts[floor(length(our_ts)/2):length(our_ts)]) #means
+lambda/mu-var(rdiff(afun,bfun,lambda=1,mu=0.1,t=50)) #variances
+
+```
+
